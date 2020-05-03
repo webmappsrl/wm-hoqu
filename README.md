@@ -19,8 +19,14 @@ a database for queue management, a series of support scripts (CLI).
 
 
 ## Unit test
-If you want to run unit test you must use phpunit
+If you want to run a specific unit test (phpunit must be installed):
 
 ```
 phpunit --color=always --bootstrap src/autoload.php --whitelist src tests/unit/hoquTest.php
+```
+
+If you want to run a all unit test:
+
+```
+phpunit --color=always --bootstrap src/autoload.php --whitelist src tests/unit/*
 ```
