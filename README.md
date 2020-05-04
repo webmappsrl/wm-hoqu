@@ -28,5 +28,5 @@ phpunit --color=always --bootstrap src/autoload.php --whitelist src tests/unit/h
 If you want to run a all unit test:
 
 ```
-phpunit --color=always --bootstrap src/autoload.php --whitelist src tests/unit/*
+phpunit --color=always --bootstrap src/autoload.php --whitelist src tests/unit
 ```
