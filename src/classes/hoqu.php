@@ -3,6 +3,7 @@
  * Main class
  */
 final class hoqu {
+
     /**
      * @var int Timestamp containing initial start execution time
      */
@@ -52,6 +53,12 @@ final class hoqu {
      */
     public function getConfiguration() {
         return $this->configuration;
+    }
+
+    public function getInfo() {
+        $info = array();
+        $info['version'] = constant('HOQU_VERSION');
+        return json_encode($info);
     }
 
 }
