@@ -30,3 +30,37 @@ If you want to run a all unit test:
 ```
 phpunit --color=always --bootstrap src/autoload.php --whitelist src tests/unit
 ```
+
+## E2E API test using PHPUNIT and GUZZLE
+Guzzle acts as a powerful HTTP client which we can use to simulate HTTP Requests against our API. 
+Though PHPUnit acts as a Unit Test framework (based on XUnit), in this case we will be using this powerful testing 
+framework to test the HTTP responses we get back from our APIs using Guzzle.
+Useful resources:
+ - https://github.com/IcyApril/Test-the-REST
+ - https://blog.cloudflare.com/using-guzzle-and-phpunit-for-rest-api-testing/
+
+If you want to run 2e2 api test locally, you must configure your computer before, by following steps:
+- Configure local server (APACHE, PHP, MYSQL)
+- Add following Virtual HOST to your APACHE configuration file
+```
+<VirtualHost *:80>
+    DocumentRoot "/path/to/hoqu/src/"
+    ServerName hoqutest.webmapp.it   
+</VirtualHost>
+```
+- Add the following line to your /etc/hosts file
+```
+127.0.0.1 hoqutest.webmapp.it
+```
+
+If you want to run a specific unit test (phpunit must be installed):
+
+```
+phpunit --color=always --bootstrap src/autoload.php --whitelist src tests/e2e_api/indexTest.php
+```
+
+If you want to run a all unit test:
+
+```
+phpunit --color=always --bootstrap src/autoload.php --whitelist src tests/e2e_api
+```

@@ -24,5 +24,11 @@ class hoquTest extends TestCase
         $this->assertTrue(isset($conf['mysql']['user']));
         $this->assertTrue(isset($conf['mysql']['password']));
     }
+
+    public function testGetInfo() {
+        $h = hoqu::Instance();
+        $info = json_decode($h->getInfo(),TRUE);
+        $this->assertTrue(isset($info['version']));
+    }
 }
 

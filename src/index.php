@@ -1,5 +1,6 @@
 <?php
 require 'autoload.php';
-
-echo "INDEX";
+header('Content-type: application/json');
+$h=hoqu::Instance();
+echo $h->getInfo();
 
