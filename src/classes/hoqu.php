@@ -10,6 +10,11 @@ final class hoqu {
     private $start;
 
     /**
+     * @var Connection to MYSQL DB
+     */
+    private $db;
+
+    /**
      * @var array Array containing all configuration settings, constructor reads data form config.json
      */
     private $configuration = array();
@@ -38,6 +43,8 @@ final class hoqu {
         $this->configuration=json_decode(file_get_contents(__DIR__.'/../config.json'),true);
 
         // CONNECT TO DB
+        $db = $this->configuration['mysql'];
+        $this->db = new mysqli($db['host'],$db['user'],$db['password'],$db['db']);
 
     }
 
@@ -58,6 +65,8 @@ final class hoqu {
     public function getInfo() {
         $info = array();
         $info['version'] = constant('HOQU_VERSION');
+        $info['mysql'] = $this->db->server_version;
+        $info['php'] = phpversion();
         return json_encode($info);
     }
 
