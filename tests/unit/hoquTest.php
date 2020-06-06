@@ -9,7 +9,7 @@ class hoquTest extends TestCase
     }
 
     /**
-     * Add $n*4 items in queue according to the queue model
+     * Add $n*4 items ($n new, $n process, $n completed, $n error) in queue according to the queue model
      *
      * {
          "instance": "https:\/\/montepisanotree.org",
@@ -22,6 +22,18 @@ class hoquTest extends TestCase
      * @param int $n
      */
     private function mockDB($n=10) {
+        $h = hoqu::Instance();
+        $h->cleanQueue();
+
+        // Add $n New
+        for ($i = 0; $i < $n; $i++) {
+            $instance = "$i".'.new.test.instance.it';
+            $id = $h->add($instance,'testTask','{"testpar" : "testparval"}');
+        }
+
+        // TODO Add $n process
+        // TODO Add $n completed
+        // TODO Add $n error
     }
 
     public function testSingleton() {
