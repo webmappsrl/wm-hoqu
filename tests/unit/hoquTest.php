@@ -129,5 +129,43 @@ class hoquTest extends TestCase
         $this->assertEquals(0,$s['error']);
 
     }
+
+
+    public function testProcessNext() {
+        $h = hoqu::Instance();
+        $h->cleanQueue();
+        $id = $h->add('test.instance.it','testTask','{"testpar" : "testparval"}');
+        $id_new = $h->processNext();
+
+        $this->assertTrue($id==$id_new);
+
+        // Retrieve and check values
+        $r = $h->getQueue($id);
+        $this->assertTrue(isset($r['id']));
+        $this->assertTrue(isset($r['instance']));
+        $this->assertTrue(isset($r['task']));
+        $this->assertTrue(isset($r['parameters']));
+        $this->assertTrue(isset($r['created_at']));
+        $this->assertTrue(isset($r['process_status']));
+        $this->assertTrue(array_key_exists('process_log',$r));
+
+        $this->assertEquals($id_new,$r['id']);
+        $this->assertEquals('test.instance.it',$r['instance']);
+        $this->assertEquals('testTask',$r['task']);
+        $p = json_decode($r['parameters'],true);
+        $this->assertTrue(array_key_exists('testpar',$p));
+        $this->assertEquals('testparval',$p['testpar']);
+        $this->assertEquals('processing',$r['process_status']);
+        $log = json_decode($r['process_log'],TRUE);
+        $this->assertTrue(isset($log['start_process']));
+
+        // Test status 0,1,0,0
+        $s=$h->getStatus();
+        $this->assertEquals(0,$s['new']);
+        $this->assertEquals(1,$s['processing']);
+        $this->assertEquals(0,$s['completed']);
+        $this->assertEquals(0,$s['error']);
+
+    }
 }
 

@@ -5,11 +5,6 @@
 final class hoqu {
 
     /**
-     * @var int Timestamp containing initial start execution time
-     */
-    private $start;
-
-    /**
      * @var Connection to MYSQL DB
      */
     private $db;
@@ -52,13 +47,6 @@ final class hoqu {
             $this->createQueue();
         }
 
-    }
-
-    /**
-     * @return int Getter for start property
-     */
-    public function getStart() {
-        return $this->start;
     }
 
     /**
@@ -110,12 +98,39 @@ final class hoqu {
         $instance = $this->db->real_escape_string($instance);
         $task = $this->db->real_escape_string($task);
         $parameters = $this->db->real_escape_string($parameters);
-        $q = "INSERT into queue (instance,task,parameters) values('$instance','$task','$parameters')";
+        $q = "INSERT INTO queue (instance,task,parameters) VALUES ('$instance','$task','$parameters')";
         $r = $this->db->query($q);
         if(!$r) {
             throw new hoquExceptionDB($this->db->error);
         }
         return $this->db->insert_id;
+    }
+
+    /**
+     * Process Next item: get next new item set process_status to processing, add time to start_process in process_log
+     * @return mixed|null
+     * @throws hoquExceptionDB
+     */
+    public function processNext() {
+        // Get next
+        $q = "SELECT id FROM QUEUE WHERE process_status='new' ORDER BY created_at ASC LIMIT 1";
+        $r = $this->db->query($q);
+        if(!$r) {
+            throw new hoquExceptionDB($this->db->error);
+        }
+        if($r->num_rows==0) return null;
+        $data = $r->fetch_assoc();
+        $id = $data['id'];
+
+        // Set status processing and Add time to start_process in process_log
+        $log = $this->db->real_escape_string(json_encode(array('start_process'=>date('Y-m-d H:i:s'))));
+        $q = "UPDATE queue SET process_status='processing',process_log='$log' WHERE id=$id";
+        $r = $this->db->query($q);
+        if(!$r) {
+            throw new hoquExceptionDB($this->db->error);
+        }
+
+        return $id;
     }
 
     /**
