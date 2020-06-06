@@ -22,7 +22,6 @@ class hoquTest extends TestCase
      * @param int $n
      */
     private function mockDB($n=10) {
-
     }
 
     public function testSingleton() {
@@ -81,6 +80,38 @@ class hoquTest extends TestCase
         $h->cleanQueue();
         $s = $h->getStatus();
         $this->assertEquals(0,$s['new']);
+        $this->assertEquals(0,$s['processing']);
+        $this->assertEquals(0,$s['completed']);
+        $this->assertEquals(0,$s['error']);
+
+    }
+
+    public function testAddAndGetQueue() {
+        $h = hoqu::Instance();
+        $h->cleanQueue();
+        $id = $h->add('test.instance.it','testTask','{"testpar" : "testparval"}');
+
+        // Retrieve and check values
+        $r = $h->getQueue($id);
+        $this->assertTrue(isset($r['id']));
+        $this->assertTrue(isset($r['instance']));
+        $this->assertTrue(isset($r['task']));
+        $this->assertTrue(isset($r['parameters']));
+        $this->assertTrue(isset($r['created_at']));
+        $this->assertTrue(isset($r['process_status']));
+        $this->assertTrue(array_key_exists('process_log',$r));
+
+        $this->assertEquals($id,$r['id']);
+        $this->assertEquals('test.instance.it',$r['instance']);
+        $this->assertEquals('testTask',$r['task']);
+        $p = json_decode($r['parameters'],true);
+        $this->assertTrue(array_key_exists('testpar',$p));
+        $this->assertEquals('testparval',$p['testpar']);
+        $this->assertEquals('new',$r['process_status']);
+
+        // Test status 1,0,0,0
+        $s=$h->getStatus();
+        $this->assertEquals(1,$s['new']);
         $this->assertEquals(0,$s['processing']);
         $this->assertEquals(0,$s['completed']);
         $this->assertEquals(0,$s['error']);

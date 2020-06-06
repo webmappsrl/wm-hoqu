@@ -77,6 +77,14 @@ final class hoqu {
         $q = 'select process_status,count(*) from queue group by process_status';
         $r = $this->db->query($q);
         if($r->num_rows==0) return array('new'=>0,'processing'=>0,'completed'=>0,'error'=>0);
+        $s = array();
+        while($stats = $r->fetch_row()) {
+            $s[$stats[0]]=$stats[1];
+        }
+        foreach (array('new','processing','completed','error') as $status) {
+            if(!isset($s[$status])) $s[$status]=0;
+        }
+        return $s;
     }
 
     public function getInfo() {
@@ -86,6 +94,45 @@ final class hoqu {
         $info['php'] = phpversion();
         $info['queue_fields']=implode(',',$this->getQueueFields());
         return json_encode($info);
+    }
+
+    /**
+     * Add new item to queue, returns queue ID
+     * @param $instance
+     * @param $task
+     * @param $parameters
+     * @return mixed
+     * @throws hoquExceptionDB
+     */
+    public function add($instance,$task,$parameters) {
+        // TODO: check parameters validity
+
+        $instance = $this->db->real_escape_string($instance);
+        $task = $this->db->real_escape_string($task);
+        $parameters = $this->db->real_escape_string($parameters);
+        $q = "INSERT into queue (instance,task,parameters) values('$instance','$task','$parameters')";
+        $r = $this->db->query($q);
+        if(!$r) {
+            throw new hoquExceptionDB($this->db->error);
+        }
+        return $this->db->insert_id;
+    }
+
+    /**
+     * Return item queue by id (false if no item found)
+     * @param $id
+     * @return mixed
+     * @throws hoquExceptionDB
+     * @throws hoquExceptionDBNoID
+     */
+    public function getQueue($id) {
+        $q = "SELECT * from queue where id=$id";
+        $r = $this->db->query($q);
+        if(!$r) {
+            throw new hoquExceptionDB($this->db->error);
+        }
+        if($r->num_rows==0) throw new hoquExceptionDBNoID("NOID $id");
+        return $r->fetch_assoc();
     }
 
     /**

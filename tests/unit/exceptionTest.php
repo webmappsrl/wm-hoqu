@@ -7,6 +7,7 @@ class exceptionTest extends TestCase
     {
         $this->assertTrue(class_exists('hoquException'));
         $this->assertTrue(class_exists('hoquExceptionDB'));
+        $this->assertTrue(class_exists('hoquExceptionDBNoID'));
     }
 
 }
