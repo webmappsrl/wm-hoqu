@@ -73,6 +73,7 @@ final class hoqu {
         $info['version'] = constant('HOQU_VERSION');
         $info['mysql'] = $this->db->server_version;
         $info['php'] = phpversion();
+        $info['queue_fields']=implode(',',$this->getQueueFields());
         return json_encode($info);
     }
 
