@@ -25,22 +25,43 @@ class hoquTest extends TestCase
         $h = hoqu::Instance();
         $h->cleanQueue();
 
+        $count = 0 ;
+        $instance = "test.instance.it";
+        $logs = array ('TIME1: something that has been done', 'TIME2: something other');
         // Add $n New
         for ($i = 0; $i < $n; $i++) {
-            $instance = "$i".'.new.test.instance.it';
-            $id = $h->add($instance,'testTask','{"testpar" : "testparval"}');
+            $id = $h->add($instance,'testTask','{"testpar" : "testparval-'.$count.'"}');
+            $count++;
         }
 
         // TODO Add $n process
+        for ($i = 0; $i < $n; $i++) {
+            $id = $h->add($instance,'testTask','{"testpar" : "testparval-'.$count.'"}');
+            $h->processNext();
+            $count++;
+        }
         // TODO Add $n completed
+        for ($i = 0; $i < $n; $i++) {
+            $id = $h->add($instance,'testTask','{"testpar" : "testparval-'.$count.'"}');
+            $id = $h->processNext();
+            $h->updateOk($id,$logs);
+            $count++;
+        }
+
         // TODO Add $n error
+        for ($i = 0; $i < $n; $i++) {
+            $id = $h->add($instance,'testTask','{"testpar" : "testparval-'.$count.'"}');
+            $id = $h->processNext();
+            $h->updateError($id,$logs);
+            $count++;
+        }
     }
 
     public function testSingleton() {
         $h1 = hoqu::Instance();
         sleep(2);
         $h2 = hoqu::Instance();
-        $this->assertEquals($h1->getStart(),$h2->getStart());
+        $this->assertEquals($h1,$h2);
     }
 
     public function testConfig() {
@@ -165,6 +186,87 @@ class hoquTest extends TestCase
         $this->assertEquals(1,$s['processing']);
         $this->assertEquals(0,$s['completed']);
         $this->assertEquals(0,$s['error']);
+
+    }
+
+    public function testUpdateOk() {
+        $h = hoqu::Instance();
+        $h->cleanQueue();
+        $id = $h->add('test.instance.it','testTask','{"testpar" : "testparval"}');
+        $id_new = $h->processNext();
+        $this->assertTrue($id==$id_new);
+        $logs = array ('TIME1: something that has been done', 'TIME2: something other');
+        $h->updateOk($id_new,$logs);
+
+        // Retrieve and check values
+        $r = $h->getQueue($id);
+        $this->assertTrue(isset($r['id']));
+        $this->assertTrue(isset($r['instance']));
+        $this->assertTrue(isset($r['task']));
+        $this->assertTrue(isset($r['parameters']));
+        $this->assertTrue(isset($r['created_at']));
+        $this->assertTrue(isset($r['process_status']));
+        $this->assertTrue(array_key_exists('process_log',$r));
+
+        $this->assertEquals($id_new,$r['id']);
+        $this->assertEquals('test.instance.it',$r['instance']);
+        $this->assertEquals('testTask',$r['task']);
+        $p = json_decode($r['parameters'],true);
+        $this->assertTrue(array_key_exists('testpar',$p));
+        $this->assertEquals('testparval',$p['testpar']);
+        $this->assertEquals('completed',$r['process_status']);
+        $log = json_decode($r['process_log'],TRUE);
+        $this->assertTrue(isset($log['start_process']));
+        $this->assertTrue(isset($log['logs']));
+        $this->assertTrue(count($log['logs'])==2);
+        $this->assertTrue(isset($log['end_process']));
+
+        // Test status 0,0,1,0
+        $s=$h->getStatus();
+        $this->assertEquals(0,$s['new']);
+        $this->assertEquals(0,$s['processing']);
+        $this->assertEquals(1,$s['completed']);
+        $this->assertEquals(0,$s['error']);
+
+    }
+    public function testUpdateError() {
+        $h = hoqu::Instance();
+        $h->cleanQueue();
+        $id = $h->add('test.instance.it','testTask','{"testpar" : "testparval"}');
+        $id_new = $h->processNext();
+        $this->assertTrue($id==$id_new);
+        $logs = array ('TIME1: something that has been done', 'TIME2: something other');
+        $h->updateError($id_new,$logs);
+
+        // Retrieve and check values
+        $r = $h->getQueue($id);
+        $this->assertTrue(isset($r['id']));
+        $this->assertTrue(isset($r['instance']));
+        $this->assertTrue(isset($r['task']));
+        $this->assertTrue(isset($r['parameters']));
+        $this->assertTrue(isset($r['created_at']));
+        $this->assertTrue(isset($r['process_status']));
+        $this->assertTrue(array_key_exists('process_log',$r));
+
+        $this->assertEquals($id_new,$r['id']);
+        $this->assertEquals('test.instance.it',$r['instance']);
+        $this->assertEquals('testTask',$r['task']);
+        $p = json_decode($r['parameters'],true);
+        $this->assertTrue(array_key_exists('testpar',$p));
+        $this->assertEquals('testparval',$p['testpar']);
+        $this->assertEquals('error',$r['process_status']);
+        $log = json_decode($r['process_log'],TRUE);
+        $this->assertTrue(isset($log['start_process']));
+        $this->assertTrue(isset($log['logs']));
+        $this->assertTrue(count($log['logs'])==2);
+        $this->assertTrue(isset($log['end_process']));
+
+        // Test status 0,0,0,1
+        $s=$h->getStatus();
+        $this->assertEquals(0,$s['new']);
+        $this->assertEquals(0,$s['processing']);
+        $this->assertEquals(0,$s['completed']);
+        $this->assertEquals(1,$s['error']);
 
     }
 }

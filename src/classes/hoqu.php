@@ -31,9 +31,6 @@ final class hoqu {
      */
     private function __construct()
     {
-        // Set start time
-        $this->start=time();
-
         // READ configuration file
         $this->configuration=json_decode(file_get_contents(__DIR__.'/../config.json'),true);
 
@@ -131,6 +128,50 @@ final class hoqu {
         }
 
         return $id;
+    }
+
+    /**
+     * Set process_status to 'completed' and add messages to log in process_log
+     * @param $id The id of the item queue completed
+     * @param $logs Array of messages (EX. $logs = array ('TIME1: something that has been done', 'TIME2: something other'))
+     * @return bool
+     */
+    public function updateOk($id,$logs) {
+        $r = $this->getQueue($id);
+        $log = json_decode($r['process_log'],TRUE);
+        if(!isset($r['process_status'])) throw new hoquException('process_status field not present');
+        if($r['process_status']!='processing') throw new hoquException("process_status must be 'processing', item with id=$id has process_status='{$r['process_status']}'");
+        $log['logs']=$logs;
+        $log['end_process']=date('Y-m-d H:i:s');
+        $log = $this->db->real_escape_string(json_encode($log));
+        $q = "UPDATE queue SET process_status='completed',process_log='$log' WHERE id=$id";
+        $r = $this->db->query($q);
+        if(!$r) {
+            throw new hoquExceptionDB($this->db->error);
+        }
+        return true;
+    }
+
+    /**
+     * Set process_status to 'error' and add messages to log in process_log
+     * @param $id The id of the item queue completed
+     * @param $logs Array of messages (EX. $logs = array ('TIME1: something that has been done', 'TIME2: something other'))
+     * @return bool
+     */
+    public function updateError($id,$logs) {
+        $r = $this->getQueue($id);
+        $log = json_decode($r['process_log'],TRUE);
+        if(!isset($r['process_status'])) throw new hoquException('process_status field not present');
+        if($r['process_status']!='processing') throw new hoquException("process_status must be 'processing', item with id=$id has process_status='{$r['process_status']}'");
+        $log['logs']=$logs;
+        $log['end_process']=date('Y-m-d H:i:s');
+        $log = $this->db->real_escape_string(json_encode($log));
+        $q = "UPDATE queue SET process_status='error',process_log='$log' WHERE id=$id";
+        $r = $this->db->query($q);
+        if(!$r) {
+            throw new hoquExceptionDB($this->db->error);
+        }
+        return true;
     }
 
     /**
