@@ -46,6 +46,12 @@ final class hoqu {
         $db = $this->configuration['mysql'];
         $this->db = new mysqli($db['host'],$db['user'],$db['password'],$db['db']);
 
+        // Check if table queue exists, if not create it
+        if(!$this->tableQueueExists()) {
+            // Create TABLE
+            $this->createQueue();
+        }
+
     }
 
     /**
@@ -68,6 +74,40 @@ final class hoqu {
         $info['mysql'] = $this->db->server_version;
         $info['php'] = phpversion();
         return json_encode($info);
+    }
+
+    /**
+     * Check if db table QUEUE exists (return true) or not (return false)
+     * @return bool
+     */
+    private function tableQueueExists() {
+        $tables = array_column($this->db->query('SHOW TABLES')->fetch_all(),0);
+        return in_array('queue',$tables);
+    }
+
+    /**
+     * Get array with queue table's name
+     * @return array
+     */
+    public function getQueueFields() {
+        $q = 'DESCRIBE queue';
+        return array_column($this->db->query($q)->fetch_all(),0);
+    }
+
+    private function createQueue() {
+        $q = <<<EOQ
+create table queue (
+  id integer not null auto_increment primary key,
+  instance varchar(256),
+  task varchar(256),
+  created_at timestamp,
+  process_status varchar(256) DEFAULT 'new',
+  process_log blob
+);
+EOQ;
+    if(!$this->db->query($q)) {
+        throw new hoquExceptionDB($this->db->error);
+    }
     }
 
 }
