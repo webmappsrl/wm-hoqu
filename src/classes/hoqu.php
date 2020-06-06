@@ -68,6 +68,17 @@ final class hoqu {
         return $this->configuration;
     }
 
+    /**
+     * Return array with number of items in queue (new, processing, completed, error)
+     * @return array
+     */
+    public function getStatus() {
+        //array('new'=>,'processing'=>,'completed'=>,'error'=>);
+        $q = 'select process_status,count(*) from queue group by process_status';
+        $r = $this->db->query($q);
+        if($r->num_rows==0) return array('new'=>0,'processing'=>0,'completed'=>0,'error'=>0);
+    }
+
     public function getInfo() {
         $info = array();
         $info['version'] = constant('HOQU_VERSION');
@@ -95,12 +106,31 @@ final class hoqu {
         return array_column($this->db->query($q)->fetch_all(),0);
     }
 
+    /**
+     * Removes all queue items
+     * @return bool
+     * @throws hoquExceptionDB
+     */
+    public function cleanQueue() {
+        $q='DELETE FROM queue';
+        if(!$this->db->query($q)) {
+            throw new hoquExceptionDB($this->db->error);
+        }
+        return true;
+    }
+
+    /**
+     * Creates DB queue table
+     * @return bool
+     * @throws hoquExceptionDB
+     */
     private function createQueue() {
         $q = <<<EOQ
 create table queue (
   id integer not null auto_increment primary key,
   instance varchar(256),
   task varchar(256),
+  parameters blob,
   created_at timestamp,
   process_status varchar(256) DEFAULT 'new',
   process_log blob
@@ -109,6 +139,6 @@ EOQ;
     if(!$this->db->query($q)) {
         throw new hoquExceptionDB($this->db->error);
     }
+    return true;
     }
-
 }

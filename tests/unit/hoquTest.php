@@ -8,6 +8,23 @@ class hoquTest extends TestCase
         $this->assertTrue(class_exists('hoqu'));
     }
 
+    /**
+     * Add $n*4 items in queue according to the queue model
+     *
+     * {
+         "instance": "https:\/\/montepisanotree.org",
+         "task": "mptupdatepoi",
+            "parameters": {
+                 "id": 1987
+             }
+      }
+     *
+     * @param int $n
+     */
+    private function mockDB($n=10) {
+
+    }
+
     public function testSingleton() {
         $h1 = hoqu::Instance();
         sleep(2);
@@ -32,7 +49,7 @@ class hoquTest extends TestCase
         $this->assertTrue(isset($info['mysql']));
         $this->assertTrue(isset($info['php']));
         $this->assertTrue(isset($info['queue_fields']));
-        $this->assertEquals('id,instance,task,created_at,process_status,process_log',$info['queue_fields']);
+        $this->assertEquals('id,instance,task,parameters,created_at,process_status,process_log',$info['queue_fields']);
     }
 
     public function testQueueTable() {
@@ -41,9 +58,33 @@ class hoquTest extends TestCase
         $this->assertTrue(in_array('id',$fields));
         $this->assertTrue(in_array('instance',$fields));
         $this->assertTrue(in_array('task',$fields));
+        $this->assertTrue(in_array('parameters',$fields));
         $this->assertTrue(in_array('created_at',$fields));
         $this->assertTrue(in_array('process_status',$fields));
         $this->assertTrue(in_array('process_log',$fields));
+    }
+
+    public function testGetStatus() {
+
+        $this->mockDB();
+
+        $h = hoqu::Instance();
+        $s = $h->getStatus();
+        $this->assertEquals(10,$s['new']);
+        $this->assertEquals(10,$s['processing']);
+        $this->assertEquals(10,$s['completed']);
+        $this->assertEquals(10,$s['error']);
+    }
+
+    public function testCleanQueue() {
+        $h = hoqu::Instance();
+        $h->cleanQueue();
+        $s = $h->getStatus();
+        $this->assertEquals(0,$s['new']);
+        $this->assertEquals(0,$s['processing']);
+        $this->assertEquals(0,$s['completed']);
+        $this->assertEquals(0,$s['error']);
+
     }
 }
 

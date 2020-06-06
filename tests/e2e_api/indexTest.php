@@ -30,7 +30,7 @@ class indexTest extends TestCase
         $this->assertTrue(isset($r['php']));
         $this->assertTrue(isset($r['mysql']));
         $this->assertTrue(isset($r['queue_fields']));
-        $this->assertEquals('id,instance,task,created_at,process_status,process_log',$r['queue_fields']);
+        $this->assertEquals('id,instance,task,parameters,created_at,process_status,process_log',$r['queue_fields']);
 
 
     }
