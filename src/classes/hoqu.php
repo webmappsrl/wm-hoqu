@@ -5,11 +5,6 @@
 final class hoqu {
 
     /**
-     * @var int Timestamp containing initial start execution time
-     */
-    private $start;
-
-    /**
      * @var Connection to MYSQL DB
      */
     private $db;
@@ -36,9 +31,6 @@ final class hoqu {
      */
     private function __construct()
     {
-        // Set start time
-        $this->start=time();
-
         // READ configuration file
         $this->configuration=json_decode(file_get_contents(__DIR__.'/../config.json'),true);
 
@@ -52,13 +44,6 @@ final class hoqu {
             $this->createQueue();
         }
 
-    }
-
-    /**
-     * @return int Getter for start property
-     */
-    public function getStart() {
-        return $this->start;
     }
 
     /**
@@ -77,6 +62,14 @@ final class hoqu {
         $q = 'select process_status,count(*) from queue group by process_status';
         $r = $this->db->query($q);
         if($r->num_rows==0) return array('new'=>0,'processing'=>0,'completed'=>0,'error'=>0);
+        $s = array();
+        while($stats = $r->fetch_row()) {
+            $s[$stats[0]]=$stats[1];
+        }
+        foreach (array('new','processing','completed','error') as $status) {
+            if(!isset($s[$status])) $s[$status]=0;
+        }
+        return $s;
     }
 
     public function getInfo() {
@@ -85,7 +78,118 @@ final class hoqu {
         $info['mysql'] = $this->db->server_version;
         $info['php'] = phpversion();
         $info['queue_fields']=implode(',',$this->getQueueFields());
+        $info['status']=$this->getStatus();
         return json_encode($info);
+    }
+
+    /**
+     * Add new item to queue, returns queue ID
+     * @param $instance
+     * @param $task
+     * @param $parameters
+     * @return mixed
+     * @throws hoquExceptionDB
+     */
+    public function add($instance,$task,$parameters) {
+        // TODO: check parameters validity
+
+        $instance = $this->db->real_escape_string($instance);
+        $task = $this->db->real_escape_string($task);
+        $parameters = $this->db->real_escape_string($parameters);
+        $q = "INSERT INTO queue (instance,task,parameters) VALUES ('$instance','$task','$parameters')";
+        $r = $this->db->query($q);
+        if(!$r) {
+            throw new hoquExceptionDB($this->db->error);
+        }
+        return $this->db->insert_id;
+    }
+
+    /**
+     * Process Next item: get next new item set process_status to processing, add time to start_process in process_log
+     * @return mixed|null
+     * @throws hoquExceptionDB
+     */
+    public function processNext() {
+        // Get next
+        $q = "SELECT id FROM QUEUE WHERE process_status='new' ORDER BY created_at ASC LIMIT 1";
+        $r = $this->db->query($q);
+        if(!$r) {
+            throw new hoquExceptionDB($this->db->error);
+        }
+        if($r->num_rows==0) return null;
+        $data = $r->fetch_assoc();
+        $id = $data['id'];
+
+        // Set status processing and Add time to start_process in process_log
+        $log = $this->db->real_escape_string(json_encode(array('start_process'=>date('Y-m-d H:i:s'))));
+        $q = "UPDATE queue SET process_status='processing',process_log='$log' WHERE id=$id";
+        $r = $this->db->query($q);
+        if(!$r) {
+            throw new hoquExceptionDB($this->db->error);
+        }
+
+        return $id;
+    }
+
+    /**
+     * Set process_status to 'completed' and add messages to log in process_log
+     * @param $id The id of the item queue completed
+     * @param $logs Array of messages (EX. $logs = array ('TIME1: something that has been done', 'TIME2: something other'))
+     * @return bool
+     */
+    public function updateOk($id,$logs) {
+        $r = $this->getQueue($id);
+        $log = json_decode($r['process_log'],TRUE);
+        if(!isset($r['process_status'])) throw new hoquException('process_status field not present');
+        if($r['process_status']!='processing') throw new hoquException("process_status must be 'processing', item with id=$id has process_status='{$r['process_status']}'");
+        $log['logs']=$logs;
+        $log['end_process']=date('Y-m-d H:i:s');
+        $log = $this->db->real_escape_string(json_encode($log));
+        $q = "UPDATE queue SET process_status='completed',process_log='$log' WHERE id=$id";
+        $r = $this->db->query($q);
+        if(!$r) {
+            throw new hoquExceptionDB($this->db->error);
+        }
+        return true;
+    }
+
+    /**
+     * Set process_status to 'error' and add messages to log in process_log
+     * @param $id The id of the item queue completed
+     * @param $logs Array of messages (EX. $logs = array ('TIME1: something that has been done', 'TIME2: something other'))
+     * @return bool
+     */
+    public function updateError($id,$logs) {
+        $r = $this->getQueue($id);
+        $log = json_decode($r['process_log'],TRUE);
+        if(!isset($r['process_status'])) throw new hoquException('process_status field not present');
+        if($r['process_status']!='processing') throw new hoquException("process_status must be 'processing', item with id=$id has process_status='{$r['process_status']}'");
+        $log['logs']=$logs;
+        $log['end_process']=date('Y-m-d H:i:s');
+        $log = $this->db->real_escape_string(json_encode($log));
+        $q = "UPDATE queue SET process_status='error',process_log='$log' WHERE id=$id";
+        $r = $this->db->query($q);
+        if(!$r) {
+            throw new hoquExceptionDB($this->db->error);
+        }
+        return true;
+    }
+
+    /**
+     * Return item queue by id (false if no item found)
+     * @param $id
+     * @return mixed
+     * @throws hoquExceptionDB
+     * @throws hoquExceptionDBNoID
+     */
+    public function getQueue($id) {
+        $q = "SELECT * from queue where id=$id";
+        $r = $this->db->query($q);
+        if(!$r) {
+            throw new hoquExceptionDB($this->db->error);
+        }
+        if($r->num_rows==0) throw new hoquExceptionDBNoID("NOID $id");
+        return $r->fetch_assoc();
     }
 
     /**
