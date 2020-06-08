@@ -82,6 +82,8 @@ class hoquTest extends TestCase
         $this->assertTrue(isset($info['php']));
         $this->assertTrue(isset($info['queue_fields']));
         $this->assertEquals('id,instance,task,parameters,created_at,process_status,process_log',$info['queue_fields']);
+        $this->assertTrue(isset($info['status']));
+
     }
 
     public function testQueueTable() {
